@@ -42,6 +42,7 @@ import plotly.express as px
 import pandas as pd
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+server = app.server
 app.title = "Supply Chain Companion (SCC)"
 app._favicon = "icon_cropped2.ico"
 
