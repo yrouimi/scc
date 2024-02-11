@@ -7,7 +7,7 @@ import time
 import random
 import pandas as pd
 import dash_daq as daq
-
+import textwrap
 
 #Set the seed for the charts
 i_chartseed = 12345
@@ -43,6 +43,7 @@ import pandas as pd
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server
+
 app.title = "Supply Chain Companion (SCC)"
 app._favicon = "icon_cropped2.ico"
 
@@ -82,6 +83,11 @@ sidebar2 = html.Div(
         html.P("Jump to sections", className="lead text-center"),
         html.A("Global requirements to reach target output", href='#graph_t1_totreq',style={'display': 'block', 'text-align': 'center'}),
         html.Br(),
+        html.A("Country/region position in value chain and transactions with RoW", href='#graph_t1_countrytransactions',style={'display': 'block', 'text-align': 'center'}),
+        html.Br(),
+        html.A("Interventions at every stage of production", href='#graph_t1_countrytransactions4',style={'display': 'block', 'text-align': 'center'}),
+        html.Br(),
+        html.A("Co2 efficiency comparisons", href='#graph_t1_countrytransactions4',style={'display': 'block', 'text-align': 'center'}),
     ],
     style=SIDEBAR_STYLE,
 )
@@ -95,27 +101,90 @@ Vdownbuttons = [html.Button("↓", style={**roundbutton,**{"fontSize":26,"displa
 Vbuttons = [dbc.Button('Global requirements',color='success'),dbc.Button('Continent',id='lvl2_layer',color='light'),dbc.Button('Region',id='lvl3_layer',color='light'),
             dbc.Button('Broad segment',id='lvl4_layer',color='success'),dbc.Button('Segment',id='lvl5_layer',color='light'),dbc.Button('Supplier tier',id='lvl6_layer',color='success')]
 
-button_div = dbc.Card([dbc.CardHeader("Chart slicing",style={'width': '100%','text-align': 'center'}),dbc.CardBody(
-                      [html.Label('Concept',style={'text-align': 'center', 'text-decoration': 'underline'}),
-                      html.Hr(),dcc.Dropdown(id='Svarref_t1',options=Dvaroptions,value='Output',placeholder="Select a metric",clearable=True,style={'width': '100%','text-align': 'center'}),html.Hr(),
-                      html.Label('Layer order',style={'text-align': 'center', 'text-decoration': 'underline'}),
-                      html.Hr(),Vbuttons[1],Vrevbuttons[0], Vbuttons[2],Vrevbuttons[1], Vbuttons[3],Vrevbuttons[2],Vbuttons[4],Vrevbuttons[3],Vbuttons[5]],
-                      style={"overflow": "auto",'justify-content': 'center','align-items': 'center'})],style={"height": "450px","display": "flex", "flex-direction": "column"}) #,style={'display': 'block', 'text-align': 'center'}
-#style={'display': 'flex','flex-direction': 'column','justify-content': 'center','align-items': 'center'})],style={"height": "450px","overflow": "auto"})
+button_div = dbc.Card([
+    dbc.CardHeader("Treemap slicing - Add/remove layers and change order", style={'width': '100%', 'text-align': 'center'}),
+    dbc.CardBody([
+        html.Label('Concept', style={'text-align': 'center', 'text-decoration': 'underline'}),
+        html.Hr(),
+        dcc.Dropdown(id='Svarref_t1', options=Dvaroptions, value='Output', placeholder="Select a metric", clearable=True, style={'width': '100%'}),
+        html.Hr(),
+        html.Label('Layer order', style={'text-align': 'center', 'text-decoration': 'underline'}),
+        html.Hr(),
+        # Example of wrapping each button for centering, repeated for all buttons in your arrays
+        html.Div(Vbuttons[1], style={'text-align': 'center'}),
+        html.Div(Vrevbuttons[0], style={'display': 'flex', 'justify-content': 'center'}),
+        html.Div(Vbuttons[2], style={'text-align': 'center'}),
+        html.Div(Vrevbuttons[1], style={'display': 'flex', 'justify-content': 'center'}),
+        html.Div(Vbuttons[3], style={'text-align': 'center'}),
+        html.Div(Vrevbuttons[2], style={'display': 'flex', 'justify-content': 'center'}),
+        html.Div(Vbuttons[4], style={'text-align': 'center'}),
+        html.Div(Vrevbuttons[3], style={'display': 'flex', 'justify-content': 'center'}),
+        html.Div(Vbuttons[5], style={'text-align': 'center'}),
+        # Add more buttons as needed, wrapped in html.Div with text-align: center
+    ], style={"overflow": "auto", 'display': 'flex', 'flex-direction': 'column'}),
+], style={"height": "450px", "display": "flex", "flex-direction": "column"})
 
-    
-content2 = html.Div([
-                    dcc.Store(id='t1_treemap_data'),dcc.Store(id='t1_treemap_actlayers'),dcc.Store(id='t1_memstages',data={'Clickdata':None,'Restyledata':None,'Xaxis labels':[],'Legend labels':[],'Selection':[]}),
-                    dbc.Row(dcc.Graph(id='graph_t1_totreq'),style={'height': '900px'}),#style={"border": "1px solid black"}),
-                    dbc.Row([dbc.Col(button_div,align='center',width=1),dbc.Col(dcc.Graph(id='graph_t1_dirindir',style={'height': '100%'}),width=6),dbc.Col(dcc.Graph(id='graph_t1_sankey',style={'height': '100%'}),width=5)],style={"height": "450px"}),
-                    dcc.Dropdown(id='Sisodep_t1',options=Disooptions,value=Visos[1],placeholder="Select a country",clearable=True,style={'width': '50%'}),
-                    dcc.Input(id='nsecs_t1', type='text', placeholder='nsecs',value='4'),
-                    daq.BooleanSwitch(id='Bresid_sankey_t1',on=False, labelPosition="top",label="Balanced resid",vertical=False),
-                    dbc.Row([dbc.Col(dcc.Graph(id='graph_t1_countrytransactions'),width = 6),dbc.Col(dcc.Graph(id='graph_t1_countrytransactions2'),width = 6)]),
-                    dbc.Row([dbc.Col(dcc.Graph(id='graph_t1_countrytransactions3'),width = 6),dbc.Col(dcc.Graph(id='graph_t1_countrytransactions4'),width = 6)]),
-                    dcc.Dropdown(id='Sdim_t1_suppliertier1',options={'Industries':'Industries','Geographies':'Geographies'},value='Industries',placeholder="Industry/country breakdown?",clearable=False,style={'width': '50%'}),
-                    dbc.Row([dbc.Col(dcc.Graph(id='graph_t1_suppliertier1'),width = 4),dbc.Col(dcc.Graph(id='graph_t1_suppliertier2'),width = 8)]),
-                    dbc.Row([dbc.Col(dcc.Graph(id='graph_t1_co2emissions'),width = 12)])
+button_div2 = dbc.Card([
+    dbc.CardHeader("Detail on region's potion in value chain", style={'width': '100%', 'text-align': 'center'}),
+    dbc.CardBody([
+        html.Label('Concept', style={'text-align': 'center', 'text-decoration': 'underline'}),
+        html.Hr(),
+        dcc.Dropdown(id='Svarref_t1b', options=Dvaroptions, value='Output', placeholder="Select a metric", clearable=True, style={'width': '100%'}),
+        html.Hr(),
+        html.Label('Which region?', style={'text-align': 'center', 'text-decoration': 'underline'}),
+        html.Hr(),
+        dcc.Dropdown(id='Sisodep_t1',options=Disooptions,value=Visos[1],placeholder="Select a country",clearable=True,style={'width': '100%'}),
+        html.Hr(),
+        html.Label('# Industries to display', style={'text-align': 'center', 'text-decoration': 'underline'}),
+        html.Hr(),
+        dcc.Input(id='nsecs_t1', type='text', placeholder='nsecs',value='4'),
+        html.Hr(),
+        daq.BooleanSwitch(id='Bresid_sankey_t1',on=False, labelPosition="top",label="Balance other cat in Sankey",vertical=False),
+    ], style={"overflow": "auto", 'display': 'flex', 'flex-direction': 'column'}),
+], style={"height": "450px", "display": "flex", "flex-direction": "column"})
+
+button_div3 = dbc.Card([
+    dbc.CardHeader("Detail on stage requirements", style={'width': '100%', 'text-align': 'center'}),
+    dbc.CardBody([
+        html.Label('Concept', style={'text-align': 'center', 'text-decoration': 'underline'}),
+        html.Hr(),
+        dcc.Dropdown(id='Svarref_t1c', options=Dvaroptions, value='Output', placeholder="Select a metric", clearable=True, style={'width': '100%'}),
+        html.Hr(),
+        html.Label('Chart 1 - Position of which region?', style={'text-align': 'center', 'text-decoration': 'underline'}),
+        html.Hr(),
+        dcc.Dropdown(id='Sisodep_t1b',options=Disooptions,value=Visos[1],placeholder="Select a country",clearable=True,style={'width': '100%'}),
+        html.Hr(),
+        html.Label('How many stages?', style={'text-align': 'center', 'text-decoration': 'underline'}),
+        html.Hr(),
+        dcc.Input(id='nstages', type='text', placeholder='nstages',value='6'),
+        html.Hr(),
+        html.Label('Click on element of second chart to get country detail of who intervenes at a given stage in a given industry', style={'text-align': 'center', 'text-decoration': 'underline'}),
+        ], style={"overflow": "auto", 'display': 'flex', 'flex-direction': 'column'}),
+], style={"height": "450px", "display": "flex", "flex-direction": "column"})
+
+Dcharts = {'Chart totreqs':dcc.Loading(id="loading-chart",type="default",children=[dcc.Graph(id='graph_t1_totreq',style={'height': '500px'})],fullscreen=False),
+           'Treemap':dcc.Loading(id="loading-chart",type="default",children=[dcc.Graph(id='graph_t1_dirindir',style={'height': '100%'})],fullscreen=False),
+           'Sankey1':dcc.Loading(id="loading-chart",type="default",children=[dcc.Graph(id='graph_t1_sankey',style={'height': '100%'})],fullscreen=False),
+           'Sankey2':dcc.Loading(id="loading-chart",type="default",children=[dcc.Graph(id='graph_t1_countrytransactions',style={'height': '100%'})],fullscreen=False),
+           'Trade chart':dcc.Loading(id="loading-chart",type="default",children=[dcc.Graph(id='graph_t1_countrytransactions2',style={'height': '100%'})],fullscreen=False),
+           'Trade chart2':dcc.Loading(id="loading-chart",type="default",children=[dcc.Graph(id='graph_t1_countrytransactions3',style={'height': '100%'})],fullscreen=False),
+           'Trade chart3':dcc.Loading(id="loading-chart",type="default",children=[dcc.Graph(id='graph_t1_countrytransactions4',style={'height': '100%'})],fullscreen=False),
+           'Stage1':dcc.Loading(id="loading-chart",type="default",children=[dcc.Graph(id='graph_t1_suppliertier1',style={'height': '100%'})],fullscreen=False),
+           'Stage2':dcc.Loading(id="loading-chart",type="default",children=[dcc.Graph(id='graph_t1_suppliertier2',style={'height': '100%'})],fullscreen=False),
+           'Emissions':dcc.Loading(id="loading-chart",type="default",children=[dcc.Graph(id='graph_t1_co2emissions',style={'height': '100%'})],fullscreen=False)
+           }
+       
+
+#dcc.Loading(id="loading1",type="default",children=html.Div(id="graph_t1_totreq"))
+content2 = html.Div([dcc.Store(id='t1_treemap_data'),dcc.Store(id='t1_treemap_actlayers'),dcc.Store(id='t1_memstages',data={'Clickdata':None,'Restyledata':None,'Xaxis labels':[],'Legend labels':[],'Selection':[]}),
+                    dbc.Row(Dcharts['Chart totreqs']),
+                    dbc.Row([dbc.Col(button_div,align='center',width=2),dbc.Col(Dcharts['Treemap'],width=5),dbc.Col(Dcharts['Sankey1'],width=5)],style={"height": "450px"}),
+                    html.Hr(),
+                    dbc.Row([dbc.Col(button_div2,align='center',width=2),dbc.Col(Dcharts['Sankey2'],width=10)],style={"height": "450px"}),
+                    dbc.Row([dbc.Col(Dcharts['Trade chart'],width = 6),dbc.Col(Dcharts['Trade chart2'],width = 6)]),
+                    html.Hr(),
+                    dbc.Row([dbc.Col(button_div3,align='center',width=2),dbc.Col(Dcharts['Trade chart3'],width = 3),dbc.Col(Dcharts['Stage1'],width = 4),dbc.Col(Dcharts['Stage2'],width = 3)]),
+                    dbc.Row([dbc.Col(Dcharts['Emissions'],width = 12)])
                     ],style={'margin-left': '15%'}
                     )
 
@@ -139,11 +208,15 @@ tabs = dcc.Tabs(
 
 app.layout = html.Div(children=[tabs])
 
+@app.callback(Output("loading-output-1", "children"), Input("loading-input-1", "value"))
+def input_triggers_spinner(value):
+    return value
+
+
 @app.callback(Output('t1_treemap_data', 'data'), 
               Input('Sisoref_t1', 'value'),Input('Ssecref_t1', 'value'),Input('Sturnover_t1', 'value'))
 def fn_update_storeddata(Sisoref,Ssecref,Sturnover):
-     print('Test0')
-     print(Sturnover)
+
      # some expensive data processing step
      Vmat = mopers.fn_calc_intermediatereqs_stal(Sisoref,Ssecref,'Output',Sturnover) #No Svarref, will need to convert as per each function
 
@@ -175,26 +248,21 @@ def fn_actdeact_layers(click2,click3,click4,click5,click6,click23,click34,click4
         return color_tupple
  
     elif firedcomp_id != '':
-    
-        print(firedcomp_id)
-        
+
         Sfiredcolor = Dcurrentcolors[firedcomp_id]
 
         #Is the fired button active or not? 
         Scolor = 'light' if Sfiredcolor=='success' else 'success'
         Dcurrentcolors[firedcomp_id] =  Scolor
 
-        print('Update of colors in cache')
         res_tupple = (Dcurrentcolors['lvl2_layer'],Dcurrentcolors['lvl3_layer'],Dcurrentcolors['lvl4_layer'],Dcurrentcolors['lvl5_layer'],Dcurrentcolors['lvl6_layer'])
-        print(res_tupple)
       
         return res_tupple
         
     else:
         
-        print('First insertion of colors in cache')
         res_tupple = (Dcurrentcolors['lvl2_layer'],Dcurrentcolors['lvl3_layer'],Dcurrentcolors['lvl4_layer'],Dcurrentcolors['lvl5_layer'],Dcurrentcolors['lvl6_layer'])
-        print(res_tupple)
+
         return res_tupple
 
 @app.callback(Output('graph_t1_totreq', 'figure'),
@@ -206,8 +274,8 @@ def update_figure(Vireqs,Sisoref,Ssecref,Sturnover):  #Reliance of Ssecref_Sisor
     Visos = mopers.fn_removelist_duppli(mopers.Dstructuralarrays['Slicing_vecs'][0],True)
     Vgroups = mopers.Dstructuralarrays['Slicing_vecs']
     
-    fig = make_subplots(rows=2, cols=2,subplot_titles = ('Output ($mln)','Value added ($mln)','Employment (thous. jobs)','Co2 emissions (mmt)'),horizontal_spacing = 0.05,vertical_spacing = 0.15)
-    Dpos = {1:[1,1],2:[1,2],3:[2,1],4:[2,2]}
+    fig = make_subplots(rows=1, cols=4,subplot_titles = ('Output ($mln)','Value added ($mln)','Employment (thous. jobs)','Co2 emissions (mmt)'),horizontal_spacing = 0.05,vertical_spacing = 0.15)
+    Dpos = {1:[1,1],2:[1,2],3:[1,3],4:[1,4]}
     
     Vireqs = np.array(Vireqs).sum(axis=1)
     
@@ -231,7 +299,7 @@ def update_figure(Vireqs,Sisoref,Ssecref,Sturnover):  #Reliance of Ssecref_Sisor
             fig.add_trace(go.Bar(y=Vy2,x=[val.replace(" ", "<br>") for val in Visos],legendgroup=Ssec,showlegend=(i == 0),name=Ssec,marker_color=mopers.fn_generate_hexcolor(Ssec)),row=Dpos[i+1][0],col=Dpos[i+1][1])
     
     fig.update_traces(width=0.33)        
-    Stitle = 'Total requirements by industry/geography for ' + Ssecref + ' industry in ' + Sisoref + ' to reach desired turnover'
+    Stitle = 'Intermediate requirements by industry/geography for ' + Ssecref + ' industry in ' + Sisoref + ' to reach desired turnover'
     fig.update_layout(barmode='relative',title=Stitle) #legend=dict(orientation="h",yanchor="bottom",y=-0.15,xanchor="center",x=0.5)
 
     fig.update_xaxes(tickangle=0)
@@ -251,8 +319,6 @@ def update_figure(Vireqs,Sisoref,Ssecref,Sturnover):  #Reliance of Ssecref_Sisor
 def fn_genr_treemap(click23,click34,click45,click56,click2,click3,click4,click5,click6,
                     Sisoref,Ssecref,Svarref,Sturnover,lvl2_label,lvl3_label,lvl4_label,lvl5_label,lvl6_label, Vactdeact,Vireqs):
     
-    print('Generation of treemap - Colors in cache:')
-    print(Vactdeact)
     ctx = dash.callback_context
     firedcomp_id = ctx.triggered[0]['prop_id'].split('.')[0]
     
@@ -349,10 +415,9 @@ def genr_sankey1(click_data,Sisoref,Ssecref,Svarref,Sturnover,Vireqs):
         Slabel = click_data['points'][0]['id']
         Vid = Slabel.split("/")
 
-    print(Vid)
     Vgroups = mopers.Dstructuralarrays['Slicing_vecs']    
     Vdimdeps = [Sid for Sid in Vid if Sid in Vgroups]
-    print(Vdimdeps)
+
     fig = fn_fill_sankey1(Vireqs,Sisoref, Ssecref,Vdimdeps,Svarref,Sturnover)
 
     return fig
@@ -369,8 +434,8 @@ def fn_fill_sankey1(Vmat,Sisoref,Ssecref,Vdimdeps,Svarref,Sturnover):
     
     Vsecs = mopers.fn_removelist_duppli(mopers.Dstructuralarrays['Slicing_vecs'][1],False)
        
-    Vu = np.concatenate(([Smnemoref, Ssecdep + ' - Direct'], Vsecs, [Ssecdep + ' - Indirect']))
-    Vu2 = np.concatenate(([Ssecref,Ssecdep], Vsecs, [Ssecdep]))
+    Vu = np.concatenate(([Smnemoref, Ssecdep + '<br>Direct'], Vsecs,['Other industries'], [Ssecdep + '<br>Indirect']))
+    Vu2 = np.concatenate(([Ssecref,Ssecdep], Vsecs,['Other industries'], [Ssecdep]))
     Vuniverse = Vu.tolist()
     Vuniverse2 = Vu2.tolist()
         
@@ -381,7 +446,7 @@ def fn_fill_sankey1(Vmat,Sisoref,Ssecref,Vdimdeps,Svarref,Sturnover):
     Vlinecolors = []
     
     # First, ref sector direct purchases from sector in question
-    Vsources = [Vuniverse.index(Ssecdep + ' - Direct')]
+    Vsources = [Vuniverse.index(Ssecdep + '<br>Direct')]
     Vlinecolors.append(Vdimdeps[0]) if len(Vdimdeps) > 0 else Vlinecolors.append('gray')
     Vtargets = [Vuniverse.index(Smnemoref)]
     dirpurch=mopers.fn_calcconditional_sum(Vmat,Vgroups,Vgroups, Vdimdeps,[Sisoref, Ssecref])#.fn_assess_dep('Supply',Sisoref,Ssecref,'*',Ssecdep,Svarref)[0]
@@ -389,21 +454,43 @@ def fn_fill_sankey1(Vmat,Sisoref,Ssecref,Vdimdeps,Svarref,Sturnover):
 
     #  NOTE: THE SECTOR PURCHASES THINGS FROM ITSELF TOO, therefore indirectly
     # Second, flows from indirect to intermediary
+    Vbuffer = []
     for Ssec in Vsecs:
-    
-        Vsources.append(Vuniverse.index(Ssecdep + ' - Indirect'))
-        Vlinecolors.append(Ssecdep)
-        Vtargets.append(Vuniverse.index(Ssec))
         val = mopers.fn_calcconditional_sum(Vmat,Vgroups,Vgroups, Vdimdeps,[Ssec])#*(Ssec!=Ssecref)
         if Ssec==Ssecref:
            val=val-mopers.fn_calcconditional_sum(Vmat,Vgroups,Vgroups, Vdimdeps,[Sisoref,Ssec]) 
-        Vvalues.append(val)
+        Vbuffer.append(val)
+        
+    c_val = sorted(Vbuffer)[-6]
+    
+    for i,Ssec in enumerate(Vsecs):
+    
+        val = Vbuffer[i]
 
-        # Third, flows from intermediary to final    
-        Vsources.append(Vuniverse.index(Ssec))
-        Vlinecolors.append(Ssec)
-        Vtargets.append(Vuniverse.index(Smnemoref))
-        Vvalues.append(val)
+        if val>=c_val:
+
+            Vsources.append(Vuniverse.index(Ssecdep + '<br>Indirect'))
+            Vlinecolors.append(Ssecdep)
+            Vtargets.append(Vuniverse.index(Ssec))
+            Vvalues.append(val)
+
+            # Third, flows from intermediary to final    
+            Vsources.append(Vuniverse.index(Ssec))
+            Vlinecolors.append(Ssec)
+            Vtargets.append(Vuniverse.index(Smnemoref))
+            Vvalues.append(val)
+    
+    val = sum(Vbuffer)-sum(val for val in Vbuffer if val >= c_val)
+    Vsources.append(Vuniverse.index(Ssecdep + '<br>Indirect'))
+    Vlinecolors.append(Ssecdep)
+    Vtargets.append(Vuniverse.index('Other industries'))
+    Vvalues.append(val)
+
+    # Third, flows from intermediary to final    
+    Vsources.append(Vuniverse.index('Other industries'))
+    Vlinecolors.append('Other industries')
+    Vtargets.append(Vuniverse.index(Smnemoref))
+    Vvalues.append(val)
 
     Vlink_colors = [mopers.fn_generate_hexcolor(Stxt) for Stxt in Vlinecolors]
     Vnodecolors = [mopers.fn_generate_hexcolor(Stxt) for Stxt in Vuniverse2]
@@ -423,18 +510,37 @@ def fn_fill_sankey1(Vmat,Sisoref,Ssecref,Vdimdeps,Svarref,Sturnover):
       color = Vlink_colors
     ))]) 
 
-    Stitle = 'Breakdown of direct and indirect exposure to ' + Ssecdep + ' industry' if sum(Vvalues) > 0 else 'No industry selected'    
 
-    fig.update_layout(title = Stitle, margin = dict(t=50, l=25, r=25, b=25))
+    Stitle = "Click on treemap element to get detail on type of exposure<br>(direct or through other type of goods/services)"
+    #Stitle = Stitle + ' - ' + Svarref
+
+    fig.update_layout(title = Stitle,title_x=0.5, margin = dict(t=80, l=25, r=25, b=25))
     
     return fig
 
  #Transactions by each industry in a given country
 @app.callback(Output('graph_t1_countrytransactions', 'figure'),
-              Input('t1_treemap_data', 'data'),Input('Sisoref_t1', 'value'),Input('Ssecref_t1', 'value'),Input('Svarref_t1', 'value'),Input('Sisodep_t1', 'value'),Input('nsecs_t1', 'value'),Input('Bresid_sankey_t1','on'))
+              Input('t1_treemap_data', 'data'),Input('Sisoref_t1', 'value'),Input('Ssecref_t1', 'value'),Input('Svarref_t1b', 'value'),Input('Sisodep_t1', 'value'),Input('nsecs_t1', 'value'),Input('Bresid_sankey_t1','on'))
 def genr_sankey2(Vireqs,Sisoref, Ssecref,Svarref,Sisozoom,nsecs,Bbalancedresid):
    
     fig = fn_update_sankey2(Vireqs,Sisoref,Ssecref,Sisozoom,Svarref,'100',nsecs,Bbalancedresid) 
+
+    cols = ["Imports","Domestic importers","Domestic exporters", "Exports"]
+    for x_coordinate, column_name in enumerate(cols):
+      fig.add_annotation(
+              x=x_coordinate / (len(cols) - 1),
+              y=1.05,
+              xref="paper",
+              yref="paper",
+              text=column_name,
+              showarrow=False,
+              font=dict(
+                  family="Courier New, monospace",
+                  size=16,
+                  color="tomato"
+                  ),
+              align="center",
+              )
 
     return fig
 
@@ -545,7 +651,7 @@ def fn_update_sankey2(Vmat,Sisoref,Ssecref,Sisodep,Svarref,Sturnover,nsecs,B_sam
             totsales=mopers.fn_calcconditional_sum(Vmat,Vgroups,Vgroups, [i,Sisodep],[])
             domsales=mopers.fn_calcconditional_sum(Vmat,Vgroups,Vgroups, [i, Sisodep],[Sisodep])
             Vvalues.append(totsales-domsales)
-    print('Here1')
+
     #################################################
     #At that point we have all transactions calculated, and the sectors to keep
     #################################################    
@@ -583,7 +689,7 @@ def fn_update_sankey2(Vmat,Sisoref,Ssecref,Sisodep,Svarref,Sturnover,nsecs,B_sam
         
     Vsources.append('Other segments -M-');Vtargets.append('Other segments -M2-')
     Vvalues.append(df_filtered.loc[mask1 & mask2, 'Values'].sum())
-    print('Here2')
+  
     ##########################
     #Transactions from resid of -M2- to sectors of M3 
     df_filtered = mopers.fn_filter_df(dfalltransactions, 'Sources', condition= ' -M2-')
@@ -643,7 +749,7 @@ def fn_update_sankey2(Vmat,Sisoref,Ssecref,Sisodep,Svarref,Sturnover,nsecs,B_sam
     #Vlink_colors = pd.Series(Vsources).str.replace('-M-|-M2-|-M3-', '', regex=True).tolist()
     Vlinecolors = [mopers.fn_generate_hexcolor(Stxt) for Stxt in Vlinecolors]    
     Vnodecolors = [mopers.fn_generate_hexcolor(Stxt) for Stxt in Vuniverse2]
-    print('Here3')
+
     fig = go.Figure(data=[go.Sankey(
     node = dict(
       pad = 15,
@@ -668,7 +774,7 @@ def fn_update_sankey2(Vmat,Sisoref,Ssecref,Sisodep,Svarref,Sturnover,nsecs,B_sam
 
  #Transactions by each industry in a given country
 @app.callback(Output('graph_t1_countrytransactions2', 'figure'),
-              Input('t1_treemap_data', 'data'),Input('Sisoref_t1', 'value'),Input('Ssecref_t1', 'value'),Input('Sisodep_t1', 'value'),Input('Svarref_t1', 'value'),Input('Sturnover_t1', 'value'),Input('nsecs_t1', 'value'))
+              Input('t1_treemap_data', 'data'),Input('Sisoref_t1', 'value'),Input('Ssecref_t1', 'value'),Input('Sisodep_t1', 'value'),Input('Svarref_t1b', 'value'),Input('Sturnover_t1', 'value'),Input('nsecs_t1', 'value'))
 def update_figure(Vmat,Sisoref,Ssecref,Sisozoom,Svarref,Sturnover,nsecs):
 
     nsecs = int(nsecs)
@@ -716,12 +822,28 @@ def update_figure(Vmat,Sisoref,Ssecref,Sisozoom,Svarref,Sturnover,nsecs):
 
     Stitle = Sisozoom + ' insertion into supply chain'
 
+    #legend=dict(y=-0.2, orientation="h", yanchor="top"),
+
+    fig.update_layout(
+        legend=dict(
+            orientation="h",  # Horizontal orientation
+            yanchor="top",
+            y=-0.2,  # Position of legend relative to the bottom of the chart
+            xanchor="center",
+            x=0.5  # Center the legend horizontally
+        ),
+        # Adjust the bottom margin to ensure the x-axis labels are visible
+        margin=dict(
+            b=0  # Increase bottom margin; adjust this value as needed
+        )
+    )
+
     fig.update_layout(barmode='relative', title=Stitle)
 
     return fig
 
 @app.callback(Output('graph_t1_countrytransactions3', 'figure'),
-              Input('t1_treemap_data', 'data'),Input('Sisoref_t1', 'value'),Input('Ssecref_t1', 'value'),Input('Sisodep_t1', 'value'),Input('Svarref_t1', 'value'),Input('Sturnover_t1', 'value'))
+              Input('t1_treemap_data', 'data'),Input('Sisoref_t1', 'value'),Input('Ssecref_t1', 'value'),Input('Sisodep_t1', 'value'),Input('Svarref_t1b', 'value'),Input('Sturnover_t1', 'value'))
 def update_figure(Vmat,Sisoref,Ssecref,Sisozoom,Svarref,Sturnover):
 
     Vsecs = mopers.fn_removelist_duppli(mopers.Dstructuralarrays['Slicing_vecs'][1],False)
@@ -774,7 +896,7 @@ def update_figure(Vmat,Sisoref,Ssecref,Sisozoom,Svarref,Sturnover):
     return fig
 
 @app.callback(Output('graph_t1_countrytransactions4', 'figure'),
-    Input('t1_treemap_data', 'data'),Input('Sisoref_t1', 'value'),Input('Ssecref_t1', 'value'),Input('Sisodep_t1', 'value'),Input('Svarref_t1', 'value'),Input('Sturnover_t1', 'value'))
+    Input('t1_treemap_data', 'data'),Input('Sisoref_t1', 'value'),Input('Ssecref_t1', 'value'),Input('Sisodep_t1b', 'value'),Input('Svarref_t1c', 'value'),Input('Sturnover_t1', 'value'))
 def update_figure(Vmat,Sisoref, Ssecref,Sisozoom,Svarref,Sturnover):
        
     Vmat = mopers.fn_convert_prodmat(np.array(Vmat),Svarref)
@@ -814,7 +936,7 @@ def update_figure(Vmat,Sisoref, Ssecref,Sisozoom,Svarref,Sturnover):
     df = pd.DataFrame(data=Ddic)
     #df['Value'][df['Industry'] == Ssec].sum()
 
-    fig = px.bar(df, x="Value", y="Industry", color="Supplier tier", orientation="h", title="Test",
+    fig = px.bar(df, x="Value", y="Industry", color="Supplier tier", orientation="h", title=Sisozoom + ' - Industry ' + Svarref + '<br>by stage and position in value chain',
                  color_continuous_scale=[[0, 'black'], [0.2, 'red'], [0.4, 'pink'], [0.6, 'orange'], [0.8, 'yellow'], [1.0, 'rgb(255, 255, 255)']])
 
     # Retrieve the bar trace from the Figure
@@ -822,24 +944,50 @@ def update_figure(Vmat,Sisoref, Ssecref,Sisozoom,Svarref,Sturnover):
 
     Vsecs = mopers.fn_removelist_duppli(df['Industry'],False)
 
+    VSCpositions = [mopers.fn_calc_SCsupplyposition(Sisoref,Ssecref,Sisozoom,Ssec,Svarref) for Ssec in Vsecs]
+
     # Add a scatter trace for the bubbles
     bubble_trace = go.Scatter(
         x=[bubble_x] * len(Vsecs),
         y=[Ssec for Ssec in Vsecs],
-        mode="markers",name = 'Average tier',
-        marker=dict(size=[200 for Ssec in Vsecs],sizemode='area',sizemin=2,color=[mopers.fn_calc_SCsupplyposition(Sisoref,Ssecref,Sisozoom,Ssec,Svarref) for Ssec in Vsecs],
-        coloraxis=bar_trace.marker.coloraxis,showscale=True)
-        )
-    print ([mopers.fn_calc_SCsupplyposition(Sisoref,Ssecref,Sisozoom,Ssec,Svarref) for Ssec in Vsecs])
+        mode="markers",
+        name='Average tier',
+        marker=dict(
+            size=[200 for Ssec in Vsecs],
+            sizemode='area',
+            sizemin=2,
+            color=VSCpositions,
+            coloraxis=bar_trace.marker.coloraxis,
+            showscale=True
+        ),
+        # Use hovertemplate for custom hover text
+        hovertemplate=[
+            f"Position in SC: {val:.2f}<extra></extra>" for val in VSCpositions
+        ]
+    )
+
     # Add the scatter trace to the Figure
     fig.add_trace(bubble_trace)
+
+    fig.update_layout(
+        legend=dict(
+            orientation="h",  # Horizontal orientation
+            yanchor="bottom",
+            y=-0.2,  # Adjust vertical position
+            xanchor="center",
+            x=0.5,  # Center horizontally
+        )
+    )
 
     return fig
 
 @app.callback(Output('graph_t1_suppliertier1', 'figure'),
-    Input('t1_treemap_data', 'data'),Input('Sisoref_t1', 'value'),Input('Ssecref_t1', 'value'),Input('Svarref_t1', 'value'),Input('Sturnover_t1', 'value'), Input('Sdim_t1_suppliertier1', 'value') )
-def update_figure(Vmat,Sisoref, Ssecref,Svarref,Sturnover,Sdim):
+    Input('t1_treemap_data', 'data'),Input('Sisoref_t1', 'value'),Input('Ssecref_t1', 'value'),Input('Svarref_t1c', 'value'),Input('nstages', 'value'),Input('Sturnover_t1', 'value'))
+def update_figure(Vmat,Sisoref, Ssecref,Svarref,Snstages,Sturnover):
        
+    Sdim = 'Industries'
+    nstages = int(Snstages)
+
     Vmat = mopers.fn_convert_prodmat(np.array(Vmat),Svarref)
     
     Visos = mopers.fn_removelist_duppli(mopers.Dstructuralarrays['Slicing_vecs'][0],True)
@@ -848,7 +996,7 @@ def update_figure(Vmat,Sisoref, Ssecref,Svarref,Sturnover,Sdim):
     
     Vbreakdown = Vsecs if Sdim == 'Industries' else Visos
         
-    Vprodstages = mopers.fn_decompose_prodstages(Sisoref,Ssecref,Svarref,Sturnover,6)[1:]
+    Vprodstages = mopers.fn_decompose_prodstages(Sisoref,Ssecref,Svarref,Sturnover,nstages)[1:]
 
     Vstagenums = [str(i+1) for i in range(len(Vprodstages)-1)]
     Vstagenums.append(str(len(Vprodstages)) + ' and more')
@@ -886,59 +1034,22 @@ def update_figure(Vmat,Sisoref, Ssecref,Svarref,Sturnover,Sdim):
         
     df = pd.DataFrame(data=Ddic)
 
-    fig = px.bar(df, x="Supplier tier", y="Value", color=Sdim, title="Test",
-                 color_discrete_map ={Ssec: mopers.fn_generate_hexcolor(Ssec) for Ssec in Ddic[Sdim]})
+    fig = px.bar(df, x="Supplier tier", y="Value", color=Sdim, title='World - Industry ' + Svarref + ' by stage',color_discrete_map ={Ssec: mopers.fn_generate_hexcolor(Ssec) for Ssec in Ddic[Sdim]})
 
     return fig
 
 @app.callback(Output('graph_t1_suppliertier2', 'figure'),Output('t1_memstages', 'data'), 
                 Input('graph_t1_suppliertier1', 'clickData'),Input('graph_t1_suppliertier1', 'restyleData'),Input('graph_t1_suppliertier1', 'figure'),Input('t1_memstages', 'data'),
-                Input('Sisoref_t1', 'value'),Input('Ssecref_t1', 'value'),Input('Svarref_t1', 'value'),Input('Sturnover_t1', 'value'), )
+                Input('Sisoref_t1', 'value'),Input('Ssecref_t1', 'value'),Input('Svarref_t1c', 'value'),Input('Sturnover_t1', 'value'), )
 def store_click_data(click_data, restyle_data, Dfig1, Dmem,Sisoref, Ssecref,Svarref,Sturnover):
     
-    print(click_data)
     Dmem = fn_harvest_click(click_data, Dmem, Dfig1)
     
     Vdashparams = [Sisoref, Ssecref,Svarref, Sturnover]
     Dfig = fn_add_subplot(Dmem, Vdashparams)
     
-    # Vclickdata_old = Dmem['Clickdata']
-    # Vrestyledata_old = Dmem['Restyledata']    
-    # Vselection = Dmem['Selection']
-        
-    # Vxaxis = Dfig1['data'][0]['x']  # Retrieve x-axis values
-    # Vlegend = [trace['name'] for trace in Dfig1['data']]  # Retrieve legend entries
 
-    # if click_data is not None and Vclickdata_old != click_data:
-    
-        # Sx = click_data['points'][0]['x'] #x coordinate of point clicked
-        # ilegend = click_data['points'][0]['curveNumber'];Slegend = Vlegend[ilegend] #legend coordinate of point clicked
-        # Dmem['Clickdata'] = click_data;Dmem['Display'] = [Slegend,Sx]
-    
-    # if restyle_data is not None and Vrestyledata_old != restyle_data:
-        
-        # #[{'visible': ['legendonly', 'legendonly', 'legendonly', True, 'legendonly', 'legendonly', 'legendonly', 'legendonly', 'legendonly', 'legendonly', 'legendonly']}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]] Case initial selection
-        # #[{'visible': [True]}, [4]]
-        # #[{'visible': ['legendonly']}, [4]]
-        # #[{'visible': [True, True, True, True, True, True, True, True, True, True, True]}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]]
-        
-        # visible_list = restyle_data[0]['visible'] #restyle: [{'visible': ['legendonly', 'legendonly', 'legendonly', True, 'legendonly', 'legendonly', 'legendonly', 'legendonly', 'legendonly', 'legendonly', 'legendonly']}, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]]        
 
-        # if len(visible_list)>1:
-            # ilegend = visible_list.index(True)
-            # Bremove = ''
-            # nbtrues = visible_list.count(True)
-        # else:
-            # ilegend=restyle_data[1][0]
-            # Bremove = restyle_data[0]['visible'][0]
-            # nbtrues = 0
-
-        # Slegend = Vlegend[ilegend]
-        # Vselection.remove(Slegend) if Slegend in Vselection or Bremove == 'legendonly' else Vselection.append(Slegend)
-
-        # Dmem['Selection'] = [] if nbtrues== len(Vlegend) else Vselection
-        # Dmem['Restyledata'] = restyle_data
-        # print('Legend entry clicked');print(Dmem['Selection'])
             
     return Dfig, Dmem
 
@@ -985,8 +1096,16 @@ def fn_add_subplot(Dmem,Vdashparams):
         
     df = pd.DataFrame(data=Ddic)
 
-    fig = px.bar(df, x="Geographies", y="Value", color='Geographies', title="Test v1",
+    n = len(Dmem['Selection'])
+    if n == 0:
+        Stitle = 'Click on chart to the left for geo detail'
+    else:
+        Stitle = "Breakdown of " + Svarref + " at stage " + Sx + '<br> in ' + Slegend + ' industry'
+
+    fig = px.bar(df, x="Geographies", y="Value", color='Geographies', title=Stitle,
                  color_discrete_map ={Siso: mopers.fn_generate_hexcolor(Siso) for Siso in Visos})
+    
+    fig.update_layout(showlegend=False)
 
     return fig
 
